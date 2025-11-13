@@ -1,0 +1,39 @@
+{
+  "name": "ecommerce-platform",
+  "version": "1.0.0",
+  "description": "MERN Stack E-Commerce Platform with Microservices",
+  "private": true,
+  "workspaces": [
+    "services/*",
+    "clients/*",
+    "shared"
+  ],
+  "scripts": {
+    "install:all": "npm install",
+    "dev:auth": "npm run dev --workspace=services/auth-service",
+    "dev:product": "npm run dev --workspace=services/product-service",
+    "dev:order": "npm run dev --workspace=services/order-service",
+    "dev:seller": "npm run dev --workspace=services/seller-service",
+    "dev:logistics": "npm run dev --workspace=services/logistics-service",
+    "dev:notification": "npm run dev --workspace=services/notification-service",
+    "dev:admin": "npm run dev --workspace=services/admin-service",
+    "start:all": "concurrently \"npm run dev:auth\" \"npm run dev:product\" \"npm run dev:order\" \"npm run dev:seller\"",
+    "lint": "eslint . --ext .js,.jsx",
+    "format": "prettier --write \"**/*.{js,jsx,json,md}\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "eslint": "^8.57.0",
+    "prettier": "^3.2.5",
+    "nodemon": "^3.0.3"
+  },
+  "keywords": [
+    "ecommerce",
+    "microservices",
+    "mern",
+    "react",
+    "nodejs"
+  ],
+  "author": "Your Name",
+  "license": "MIT"
+}
