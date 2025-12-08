@@ -6,10 +6,8 @@ const { verifyToken, authorize } = require('../../../../shared');
 const router = express.Router();
 
 // Stripe webhook (must be before other routes and without verifyToken)
-router.post('/webhook/stripe', 
-  express.raw({ type: 'application/json' }), 
-  orderController.handleStripeWebhook
-);
+// Stripe webhook (must be before other routes and without verifyToken)
+router.post('/webhook/stripe', orderController.handleStripeWebhook);
 
 // All other routes require authentication
 router.use(verifyToken);
@@ -29,7 +27,7 @@ router.get('/:id', orderController.getOrderById);
 router.patch('/:id/cancel', orderController.cancelOrder);
 
 // Seller routes
-router.get('/seller/orders', 
+router.get('/seller/orders',
   authorize('seller', 'admin'),
   orderController.getSellerOrders
 );

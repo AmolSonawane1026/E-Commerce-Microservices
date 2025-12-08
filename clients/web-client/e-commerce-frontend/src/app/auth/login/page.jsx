@@ -10,7 +10,7 @@ import toast from 'react-hot-toast';
 export default function Login() {
   const router = useRouter();
   const setUser = useStore((state) => state.setUser);
-  
+
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -106,9 +106,9 @@ export default function Login() {
             </div>
 
             <div className="text-sm">
-              <a href="#" className="font-medium text-blue-600 hover:text-blue-500">
+              <Link href="/auth/forgot-password" className="font-medium text-blue-600 hover:text-blue-500">
                 Forgot password?
-              </a>
+              </Link>
             </div>
           </div>
 

@@ -1,16 +1,18 @@
-
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  FaShoppingBag, 
-  FaMapMarkerAlt, 
-  FaCreditCard, 
+import {
+  FaShoppingBag,
+  FaMapMarkerAlt,
+  FaCreditCard,
   FaTruck,
   FaCheckCircle,
   FaClock,
-  FaTimes 
+  FaTimes,
+  FaBoxOpen,
+  FaCalendarAlt,
+  FaChevronLeft
 } from 'react-icons/fa';
 import { useStore } from '@/lib/store/useStore';
 import { orderService } from '@/lib/services/orderService';
@@ -19,7 +21,7 @@ import toast from 'react-hot-toast';
 export default function OrderDetails() {
   const params = useParams();
   const router = useRouter();
-  const { isAuthenticated, initAuth } = useStore();
+  const { isAuthenticated, initAuth, clearCart } = useStore();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(false);
@@ -43,6 +45,9 @@ export default function OrderDetails() {
       setLoading(true);
       const response = await orderService.getOrderById(params.id);
       setOrder(response.data.order);
+
+      // Clear cart after successfully viewing order
+      clearCart();
     } catch (error) {
       console.error('Error fetching order:', error);
       toast.error('Failed to load order details');
@@ -69,27 +74,27 @@ export default function OrderDetails() {
 
   const getStatusColor = (status) => {
     const colors = {
-      'pending': 'bg-yellow-100 text-yellow-800',
-      'payment_pending': 'bg-orange-100 text-orange-800',
-      'paid': 'bg-blue-100 text-blue-800',
-      'confirmed': 'bg-green-100 text-green-800',
-      'processing': 'bg-blue-100 text-blue-800',
-      'packed': 'bg-purple-100 text-purple-800',
-      'shipped': 'bg-purple-100 text-purple-800',
-      'out_for_delivery': 'bg-indigo-100 text-indigo-800',
-      'delivered': 'bg-green-100 text-green-800',
-      'cancelled': 'bg-red-100 text-red-800',
-      'returned': 'bg-orange-100 text-orange-800',
-      'refunded': 'bg-gray-100 text-gray-800',
+      'pending': 'bg-amber-50 text-amber-700 border-amber-200',
+      'payment_pending': 'bg-orange-50 text-orange-700 border-orange-200',
+      'paid': 'bg-blue-50 text-blue-700 border-blue-200',
+      'confirmed': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      'processing': 'bg-sky-50 text-sky-700 border-sky-200',
+      'packed': 'bg-purple-50 text-purple-700 border-purple-200',
+      'shipped': 'bg-violet-50 text-violet-700 border-violet-200',
+      'out_for_delivery': 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200',
+      'delivered': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      'cancelled': 'bg-red-50 text-red-700 border-red-200',
+      'returned': 'bg-orange-50 text-orange-700 border-orange-200',
+      'refunded': 'bg-gray-50 text-gray-700 border-gray-200',
     };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-50 text-gray-700 border-gray-200';
   };
 
   const getStatusIcon = (status) => {
-    if (status === 'delivered') return <FaCheckCircle className="text-green-600" />;
-    if (status === 'cancelled') return <FaTimes className="text-red-600" />;
-    if (status === 'shipped' || status === 'out_for_delivery') return <FaTruck className="text-purple-600" />;
-    return <FaClock className="text-yellow-600" />;
+    if (status === 'delivered') return <FaCheckCircle />;
+    if (status === 'cancelled') return <FaTimes />;
+    if (status === 'shipped' || status === 'out_for_delivery') return <FaTruck />;
+    return <FaClock />;
   };
 
   const canCancelOrder = (status) => {
@@ -108,8 +113,9 @@ export default function OrderDetails() {
 
   if (!isClient || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-900 mb-4"></div>
+        <p className="text-gray-500 animate-pulse">Loading order details...</p>
       </div>
     );
   }
@@ -119,27 +125,40 @@ export default function OrderDetails() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 font-sans py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+        
+        {/* Navigation & Title */}
+        <div className="mb-8">
+          <button 
+            onClick={() => router.push('/orders')}
+            className="flex items-center text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors"
+          >
+            <FaChevronLeft className="mr-2" size={12} /> Back to Orders
+          </button>
+          
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+              <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-baseline gap-3">
                 Order #{order.orderNumber}
               </h1>
-              <p className="text-gray-600">Placed on {formatDate(order.createdAt)}</p>
+              <div className="flex items-center text-gray-500 mt-2 text-sm">
+                <FaCalendarAlt className="mr-2" size={14} />
+                <span>Placed on {formatDate(order.createdAt)}</span>
+              </div>
             </div>
-            <div className="mt-4 md:mt-0 flex items-center space-x-3">
-              <span className={`px-4 py-2 rounded-full text-sm font-semibold flex items-center space-x-2 ${getStatusColor(order.status)}`}>
+
+            <div className="flex items-center gap-3">
+              <span className={`px-4 py-2 rounded-full text-sm font-bold border flex items-center gap-2 shadow-sm ${getStatusColor(order.status)}`}>
                 {getStatusIcon(order.status)}
-                <span>{order.status.replace('_', ' ').toUpperCase()}</span>
+                <span className="uppercase tracking-wide text-xs">{order.status.replace('_', ' ')}</span>
               </span>
+              
               {canCancelOrder(order.status) && (
                 <button
                   onClick={handleCancelOrder}
                   disabled={cancelling}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold disabled:opacity-50 transition"
+                  className="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-full font-semibold text-sm disabled:opacity-50 transition-all shadow-sm"
                 >
                   {cancelling ? 'Cancelling...' : 'Cancel Order'}
                 </button>
@@ -148,42 +167,48 @@ export default function OrderDetails() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Main Content (Left) */}
+          <div className="lg:col-span-8 space-y-8">
+            
             {/* Order Items */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <FaShoppingBag className="mr-2 text-blue-600" />
-                Order Items
-              </h2>
-              <div className="space-y-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50 flex items-center gap-2">
+                <FaShoppingBag className="text-gray-400" />
+                <h2 className="font-bold text-gray-900">Order Items</h2>
+                <span className="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded-full font-bold ml-auto">{order.items.length} Items</span>
+              </div>
+              
+              <div className="p-6 space-y-6">
                 {order.items.map((item) => (
-                  <div key={item._id} className="flex items-center space-x-4 pb-4 border-b border-gray-200 last:border-0">
-                    <div className="w-20 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0">
+                  <div key={item._id} className="flex gap-4 group">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100 group-hover:border-gray-200 transition-colors">
                       {item.image ? (
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-full h-full object-cover"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <FaShoppingBag className="text-gray-400" />
+                        <div className="w-full h-full flex items-center justify-center text-gray-300">
+                          <FaBoxOpen size={24} />
                         </div>
                       )}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                      <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                      <p className="text-sm text-gray-600">
-                        Price: ₹{item.price.toLocaleString('en-IN')} each
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-gray-900">
-                        ₹{item.subtotal.toLocaleString('en-IN')}
-                      </p>
+                    
+                    <div className="flex-1 flex flex-col justify-center">
+                      <div className="flex justify-between items-start gap-4">
+                        <div>
+                            <h3 className="font-bold text-gray-900 text-lg leading-tight">{item.name}</h3>
+                            <p className="text-sm text-gray-500 mt-1">Qty: {item.quantity} × ₹{item.price.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="text-right">
+                            <p className="font-bold text-gray-900 text-lg">
+                                ₹{item.subtotal.toLocaleString('en-IN')}
+                            </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -192,149 +217,146 @@ export default function OrderDetails() {
 
             {/* Order Timeline */}
             {order.timeline && order.timeline.length > 0 && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <FaClock className="mr-2 text-blue-600" />
-                  Order Timeline
-                </h2>
-                <div className="space-y-4">
-                  {order.timeline.map((event, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-600 rounded-full"></div>
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{event.message}</p>
-                        <p className="text-sm text-gray-500">
-                          {formatDate(event.timestamp)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="px-6 py-4 border-b border-gray-50 bg-gray-50/50 flex items-center gap-2">
+                  <FaClock className="text-gray-400" />
+                  <h2 className="font-bold text-gray-900">Tracking History</h2>
                 </div>
+                
+                <div className="p-6">
+                  <div className="relative pl-4 border-l-2 border-gray-100 space-y-8 ml-2">
+                    {order.timeline.map((event, index) => (
+                      <div key={index} className="relative">
+                        <div className={`absolute -left-[21px] top-1.5 w-3 h-3 rounded-full border-2 ${index === 0 ? 'bg-blue-600 border-blue-600 ring-4 ring-blue-50' : 'bg-white border-gray-300'}`}></div>
+                        <div>
+                            <p className={`font-semibold ${index === 0 ? 'text-gray-900' : 'text-gray-600'}`}>{event.message}</p>
+                            <p className="text-xs text-gray-400 mt-1">{formatDate(event.timestamp)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Tracking Info Block */}
+            {order.trackingInfo?.trackingNumber && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                 <div>
+                    <h3 className="font-bold text-blue-900 flex items-center gap-2">
+                        <FaTruck /> Tracking Information
+                    </h3>
+                    <div className="mt-2 text-sm text-blue-800">
+                        <p><span className="opacity-70">Carrier:</span> <span className="font-semibold">{order.trackingInfo.carrier}</span></p>
+                        <p><span className="opacity-70">Number:</span> <span className="font-mono">{order.trackingInfo.trackingNumber}</span></p>
+                    </div>
+                 </div>
+                 {order.trackingInfo.trackingUrl && (
+                    <a
+                      href={order.trackingInfo.trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-2 bg-white text-blue-700 font-semibold rounded-lg shadow-sm border border-blue-100 hover:bg-blue-50 transition-colors text-sm"
+                    >
+                      Track Shipment
+                    </a>
+                  )}
               </div>
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Order Summary */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-              <div className="space-y-2 mb-4">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">₹{order.subtotal.toLocaleString('en-IN')}</span>
+          {/* Sidebar (Right) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* Payment Summary */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
+              <h2 className="font-bold text-gray-900 mb-6 text-lg">Order Summary</h2>
+              
+              <div className="space-y-3 pb-6 border-b border-gray-100 text-sm">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span className="font-medium text-gray-900">₹{order.subtotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Tax</span>
-                  <span className="font-medium">₹{order.tax.toLocaleString('en-IN')}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Tax</span>
+                  <span className="font-medium text-gray-900">₹{order.tax.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-medium">
-                    {order.shippingCharges === 0 ? 'FREE' : `₹${order.shippingCharges.toLocaleString('en-IN')}`}
+                <div className="flex justify-between text-gray-600">
+                  <span>Shipping</span>
+                  <span className="font-medium text-gray-900">
+                    {order.shippingCharges === 0 ? <span className="text-green-600">Free</span> : `₹${order.shippingCharges.toLocaleString('en-IN')}`}
                   </span>
                 </div>
                 {order.discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600">
+                  <div className="flex justify-between text-green-600">
                     <span>Discount</span>
                     <span>-₹{order.discount.toLocaleString('en-IN')}</span>
                   </div>
                 )}
               </div>
-              <div className="border-t border-gray-200 pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold">Total</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    ₹{order.totalAmount.toLocaleString('en-IN')}
-                  </span>
-                </div>
+              
+              <div className="pt-4 flex justify-between items-end">
+                <span className="font-bold text-gray-900">Total Amount</span>
+                <span className="font-extrabold text-2xl text-gray-900">₹{order.totalAmount.toLocaleString('en-IN')}</span>
               </div>
             </div>
 
             {/* Shipping Address */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <FaMapMarkerAlt className="mr-2 text-blue-600" />
-                Shipping Address
-              </h2>
-              <div className="text-sm text-gray-700 space-y-1">
-                <p className="font-medium">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center gap-2 mb-4 text-gray-400">
+                <FaMapMarkerAlt />
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wider">Shipping Address</h3>
+              </div>
+              
+              <div className="text-sm text-gray-600 leading-relaxed">
+                <p className="font-bold text-gray-900 text-base mb-1">
                   {order.shippingAddress.firstName} {order.shippingAddress.lastName}
                 </p>
                 <p>{order.shippingAddress.street}</p>
-                <p>
-                  {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
-                </p>
+                <p>{order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}</p>
                 <p>{order.shippingAddress.country}</p>
-                <p className="pt-2">Phone: {order.shippingAddress.phone}</p>
-                {order.shippingAddress.email && (
-                  <p>Email: {order.shippingAddress.email}</p>
-                )}
+                <div className="mt-3 pt-3 border-t border-gray-50 space-y-1">
+                    <p><span className="font-medium text-gray-900">Phone:</span> {order.shippingAddress.phone}</p>
+                    {order.shippingAddress.email && (
+                        <p><span className="font-medium text-gray-900">Email:</span> {order.shippingAddress.email}</p>
+                    )}
+                </div>
               </div>
             </div>
 
-            {/* Payment Info */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4 flex items-center">
-                <FaCreditCard className="mr-2 text-blue-600" />
-                Payment Details
-              </h2>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Payment Method</span>
-                  <span className="font-medium capitalize">
-                    {order.paymentInfo.method === 'cod' ? 'Cash on Delivery' : order.paymentInfo.method}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Payment Status</span>
-                  <span className={`font-medium capitalize ${
-                    order.paymentInfo.status === 'succeeded' ? 'text-green-600' : 
-                    order.paymentInfo.status === 'failed' ? 'text-red-600' : 'text-yellow-600'
-                  }`}>
-                    {order.paymentInfo.status}
-                  </span>
-                </div>
-                {order.paymentInfo.paidAt && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Paid On</span>
-                    <span className="font-medium">
-                      {formatDate(order.paymentInfo.paidAt)}
+            {/* Payment Details */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center gap-2 mb-4 text-gray-400">
+                <FaCreditCard />
+                <h3 className="font-bold text-gray-900 text-sm uppercase tracking-wider">Payment Info</h3>
+              </div>
+              
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                    <span className="text-gray-500">Method</span>
+                    <span className="font-semibold text-gray-900 capitalize">
+                        {order.paymentInfo.method === 'cod' ? 'Cash on Delivery' : order.paymentInfo.method}
                     </span>
-                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
+                    <span className="text-gray-500">Status</span>
+                    <span className={`font-bold capitalize px-2 py-0.5 rounded text-xs ${
+                        order.paymentInfo.status === 'succeeded' ? 'bg-green-100 text-green-700' :
+                        order.paymentInfo.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                        {order.paymentInfo.status}
+                    </span>
+                </div>
+
+                {order.paymentInfo.paidAt && (
+                   <div className="text-xs text-gray-400 text-center mt-2">
+                      Paid on {formatDate(order.paymentInfo.paidAt)}
+                   </div>
                 )}
               </div>
             </div>
 
-            {/* Tracking Info */}
-            {order.trackingInfo?.trackingNumber && (
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <FaTruck className="mr-2 text-blue-600" />
-                  Tracking Info
-                </h2>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Carrier</span>
-                    <span className="font-medium">{order.trackingInfo.carrier}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Tracking Number</span>
-                    <span className="font-medium">{order.trackingInfo.trackingNumber}</span>
-                  </div>
-                  {order.trackingInfo.trackingUrl && (
-                    <a
-                      href={order.trackingInfo.trackingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block text-blue-600 hover:text-blue-700 font-medium mt-2"
-                    >
-                      Track Shipment →
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>

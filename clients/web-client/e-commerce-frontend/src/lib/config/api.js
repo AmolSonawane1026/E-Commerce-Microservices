@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 export const API_ENDPOINTS = {
-  AUTH: process.env.NEXT_PUBLIC_AUTH_API_URL,
+  AUTH:"http://localhost:3001",
   PRODUCTS: process.env.NEXT_PUBLIC_PRODUCT_API_URL,
   ORDERS: process.env.NEXT_PUBLIC_ORDER_API_URL, // Add this
 };

@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # ----------------------------
+  # 1. Database (Shared for Dev)
+  # ----------------------------
+  mongo:
+    image: mongo:latest
+    container_name: ecommerce_mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  # ----------------------------
+  # 2. Backend Microservices
+  # ----------------------------
+  
+  auth-service:
+    build:
+      context: .                        # <--- IMPORTANT: Sets build root to project folder
+      dockerfile: ./services/auth-service/Dockerfile
+    container_name: auth_service
+    ports:
+      - "5001:3001"                     # Ensure this maps to the EXPOSE port (3001)
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo:27017/auth_db
+      - JWT_SECRET=your_jwt_secret
+    depends_on:
+      - mongo
+
+  # product-service:
+  #   build: ./services/product-service
+  #   container_name: product_service
+  #   ports:
+  #     - "5002:5000" # Host Port 5002 -> Container Port 5000
+  #   environment:
+  #     - PORT=5000
+  #     - MONGO_URI=mongodb://mongo:27017/product_db
+  #   depends_on:
+  #     - mongo
+
+  order-service:
+    # We change 'build' to an object so we can define 'context'
+    build:
+      context: .                      # Sets the build root to the main project folder
+      dockerfile: ./services/order-service/Dockerfile
+    container_name: order_service
+    ports:
+      - "5003:3003"                   # Host 5003 -> Container 3003
+    environment:
+      - PORT=3003
+      - MONGO_URI=mongodb://mongo:27017/order_db
+      - NODE_ENV=development
+    depends_on:
+      - mongo
+
+  # seller-service:
+  #   build: ./services/seller-service
+  #   container_name: seller_service
+  #   ports:
+  #     - "5004:5000" # Host Port 5004 -> Container Port 5000
+  #   environment:
+  #     - PORT=5000
+  #     - MONGO_URI=mongodb://mongo:27017/seller_db
+  #   depends_on:
+  #     - mongo
+
+  # admin-service:
+  #   build: ./services/admin-service
+  #   container_name: admin_service
+  #   ports:
+  #     - "5005:5000" # Host Port 5005 -> Container Port 5000
+  #   environment:
+  #     - PORT=5000
+  #     - MONGO_URI=mongodb://mongo:27017/admin_db
+  #   depends_on:
+  #     - mongo
+
+  # ----------------------------
+  # 3. Frontend Applications
+  # ----------------------------
+  
+  # The Main Web Client (Next.js)
+  web-client:
+    # Note the deep path based on your screenshot:
+    build: ./clients/web-client/e-commerce-frontend
+    container_name: web_client
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Sync host folder to container for live editing (Hot Reload)
+      - ./clients/web-client/e-commerce-frontend:/app
+      - /app/node_modules
+
+  # Admin Dashboard (Placeholder - uncomment if ready)
+  # admin-dashboard:
+  #   build: ./clients/admin-dashboard
+  #   ports:
+  #     - "3001:3000"
+
+  # Seller Dashboard (Placeholder - uncomment if ready)
+  # seller-dashboard:
+  #   build: ./clients/seller-dashboard
+  #   ports:
+  #     - "3002:3000"
+
+volumes:
+  mongo-data:

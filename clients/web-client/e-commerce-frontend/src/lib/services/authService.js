@@ -55,6 +55,16 @@ export const authService = {
       return !!localStorage.getItem('token');
     }
     return false;
+  },
+
+  forgotPassword: async (email) => {
+    const response = await apiClient.post(`${API_ENDPOINTS.AUTH}/api/auth/forgot-password`, { email });
+    return response.data;
+  },
+
+  resetPassword: async (token, password) => {
+    const response = await apiClient.put(`${API_ENDPOINTS.AUTH}/api/auth/reset-password/${token}`, { password });
+    return response.data;
   }
 };
 

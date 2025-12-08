@@ -143,7 +143,7 @@
 // exports.getProfile = async (req, res) => {
 //   try {
 //     const user = await User.findById(req.userId);
-    
+
 //     if (!user) {
 //       return res.status(404).json({ 
 //         success: false,
@@ -169,7 +169,7 @@
 // exports.updateProfile = async (req, res) => {
 //   try {
 //     const { profile } = req.body;
-    
+
 //     const user = await User.findById(req.userId);
 //     if (!user) {
 //       return res.status(404).json({ 
@@ -204,7 +204,7 @@
 // exports.verifyToken = async (req, res) => {
 //   try {
 //     const user = await User.findById(req.userId);
-    
+
 //     if (!user) {
 //       return res.status(404).json({ 
 //         success: false,
@@ -255,12 +255,12 @@ const { validationResult } = require('express-validator');
 const User = require('../models/User.model');
 
 // Import shared utilities
-const { 
-  sendSuccess, 
-  sendError, 
-  AppError, 
+const {
+  sendSuccess,
+  sendError,
+  AppError,
   catchAsync,
-  Logger 
+  Logger
 } = require('../../../../shared');
 
 // Generate JWT Token
@@ -381,7 +381,7 @@ exports.login = catchAsync(async (req, res, next) => {
 // Get current user profile
 exports.getProfile = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.userId);
-  
+
   if (!user) {
     throw new AppError('User not found', 404);
   }
@@ -392,7 +392,7 @@ exports.getProfile = catchAsync(async (req, res, next) => {
 // Update user profile
 exports.updateProfile = catchAsync(async (req, res, next) => {
   const { profile } = req.body;
-  
+
   const user = await User.findById(req.userId);
   if (!user) {
     throw new AppError('User not found', 404);
@@ -416,7 +416,7 @@ exports.updateProfile = catchAsync(async (req, res, next) => {
 // Verify token (for other services to validate)
 exports.verifyToken = catchAsync(async (req, res, next) => {
   const user = await User.findById(req.userId);
-  
+
   if (!user) {
     throw new AppError('User not found', 404);
   }
@@ -444,3 +444,99 @@ exports.logout = catchAsync(async (req, res, next) => {
 
   return sendSuccess(res, null, 'Logout successful');
 });
+
+// Forgot Password
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+
+  if (!user) {
+    throw new AppError('There is no user with that email address.', 404);
+  }
+
+  // Get reset token
+  const resetToken = user.getResetPasswordToken();
+
+  await user.save({ validateBeforeSave: false });
+
+  // Create reset url
+  const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+  // For frontend URL, usually it differs. Assuming frontend handles the route.
+  // Ideally, use an environment variable for frontend URL.
+  // Let's assume the frontend runs on localhost:3000 or similar and we pass that.
+  // Better approach:
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const resetLink = `${frontendUrl}/auth/reset-password/${resetToken}`;
+
+  const message = `
+    <h1>You have requested a password reset</h1>
+    <p>Please go to this link to reset your password:</p>
+    <a href=${resetLink} clicktracking=off>${resetLink}</a>
+    <p>This link will expire in 10 minutes.</p>
+  `;
+
+  try {
+    const axios = require('axios');
+    await axios.post('http://localhost:3004/api/email/send', {
+      to: user.email,
+      subject: 'Password Reset Request',
+      html: message
+    });
+
+    return sendSuccess(res, null, 'Email sent');
+  } catch (err) {
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+
+    await user.save({ validateBeforeSave: false });
+
+    Logger.error('Email send failed', err);
+    return sendError(res, 'Email could not be sent', 500);
+  }
+});
+
+// Reset Password
+exports.resetPassword = catchAsync(async (req, res, next) => {
+  // Get hashed token
+  const crypto = require('crypto');
+  const resetPasswordToken = crypto
+    .createHash('sha256')
+    .update(req.params.token)
+    .digest('hex');
+
+  const user = await User.findOne({
+    resetPasswordToken,
+    resetPasswordExpire: { $gt: Date.now() }
+  });
+
+  if (!user) {
+    throw new AppError('Invalid token or token has expired', 400);
+  }
+
+  // Set new password
+  user.password = req.body.password;
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  await user.save();
+
+  // Log the user in directly? Or ask them to login?
+  // Usually we ask them to login or return a token.
+  // Let's return a token for convenience.
+
+  const token = generateToken(user._id, user.role);
+
+  return sendSuccess(
+    res,
+    {
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        profile: user.profile
+      }
+    },
+    'Password updated success'
+  );
+});
+

@@ -1,10 +1,10 @@
 const Order = require('../models/Order.model');
 const axios = require('axios');
 const stripeService = require('../services/stripe.service');
-const { 
-  sendSuccess, 
+const {
+  sendSuccess,
   sendPaginated,
-  AppError, 
+  AppError,
   catchAsync,
   Logger,
   isValidObjectId
@@ -12,16 +12,34 @@ const {
 
 const PRODUCT_SERVICE_URL = process.env.PRODUCT_SERVICE_URL || 'http://localhost:3002';
 
+const MAILER_SERVICE_URL = process.env.MAILER_SERVICE_URL || 'http://localhost:3004';
+
+// Helper to send email (fire and forget)
+const sendEmail = async (template, data, to, subject) => {
+  try {
+    await axios.post(`${MAILER_SERVICE_URL}/api/email/send`, {
+      to,
+      subject,
+      template,
+      data
+    });
+    Logger.info(`Email sent: ${template} to ${to}`);
+  } catch (error) {
+    Logger.error('Failed to send email', error.message);
+    // Don't throw error to avoid failing the order process
+  }
+};
+
 // Create new order
 exports.createOrder = catchAsync(async (req, res, next) => {
-  const { 
-    items, 
-    shippingAddress, 
-    billingAddress, 
+  const {
+    items,
+    shippingAddress,
+    billingAddress,
     paymentMethod,
-    notes 
+    notes
   } = req.body;
-  
+
   const customerId = req.userId;
   const customerEmail = req.user?.email || shippingAddress.email;
 
@@ -31,8 +49,8 @@ exports.createOrder = catchAsync(async (req, res, next) => {
   }
 
   // Validate shipping address
-  if (!shippingAddress || !shippingAddress.street || !shippingAddress.city || 
-      !shippingAddress.state || !shippingAddress.zipCode || !shippingAddress.phone) {
+  if (!shippingAddress || !shippingAddress.street || !shippingAddress.city ||
+    !shippingAddress.state || !shippingAddress.zipCode || !shippingAddress.phone) {
     throw new AppError('Complete shipping address is required', 400);
   }
 
@@ -44,9 +62,9 @@ exports.createOrder = catchAsync(async (req, res, next) => {
   // Fetch product details and validate
   const productIds = items.map(item => item.productId);
   let products;
-  
+
   try {
-    const productPromises = productIds.map(id => 
+    const productPromises = productIds.map(id =>
       axios.get(`${PRODUCT_SERVICE_URL}/api/products/${id}`)
     );
     const responses = await Promise.all(productPromises);
@@ -60,7 +78,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
   let subtotal = 0;
   const orderItems = items.map((item, index) => {
     const product = products[index];
-    
+
     if (!product) {
       throw new AppError(`Product ${item.productId} not found`, 404);
     }
@@ -101,14 +119,14 @@ exports.createOrder = catchAsync(async (req, res, next) => {
   const year = date.getFullYear().toString().slice(-2);
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  
+
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
-  
+
   const count = await Order.countDocuments({
     createdAt: { $gte: startOfDay }
   });
-  
+
   const orderCount = String(count + 1).padStart(4, '0');
   const orderNumber = `ORD${year}${month}${day}${orderCount}`;
 
@@ -146,7 +164,7 @@ exports.createOrder = catchAsync(async (req, res, next) => {
   if (paymentMethod === 'stripe') {
     try {
       checkoutSession = await stripeService.createCheckoutSession(order, customerEmail);
-      
+
       order.paymentInfo.stripeSessionId = checkoutSession.sessionId;
       await order.save();
     } catch (error) {
@@ -165,11 +183,22 @@ exports.createOrder = catchAsync(async (req, res, next) => {
     paymentMethod
   });
 
+  // Send confirmation email
+  sendEmail(
+    'orderConfirmation',
+    {
+      order: order.toJSON(), // properly format dates/ids by converting to JSON
+      customerName: order.shippingAddress.firstName
+    },
+    customerEmail,
+    `Order Confirmation - ${order.orderNumber}`
+  );
+
   return sendSuccess(
     res,
-    { 
+    {
       order,
-      checkoutUrl: checkoutSession?.url 
+      checkoutUrl: checkoutSession?.url
     },
     'Order placed successfully',
     201
@@ -182,7 +211,7 @@ exports.getMyOrders = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 10, status, sort = '-createdAt' } = req.query;
 
   const query = { customerId };
-  
+
   if (status) {
     query.status = status;
   }
@@ -227,7 +256,7 @@ exports.getOrderById = catchAsync(async (req, res, next) => {
     if (userRole === 'customer' && order.customerId.toString() !== userId) {
       throw new AppError('Access denied', 403);
     }
-    
+
     if (userRole === 'seller') {
       const hasSellersProduct = order.items.some(
         item => item.sellerId.toString() === userId
@@ -270,8 +299,8 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
 
   // Validate status
   const validStatuses = [
-    'pending', 'payment_pending', 'paid', 'confirmed', 'processing', 
-    'packed', 'shipped', 'out_for_delivery', 'delivered', 
+    'pending', 'payment_pending', 'paid', 'confirmed', 'processing',
+    'packed', 'shipped', 'out_for_delivery', 'delivered',
     'cancelled', 'returned', 'refunded'
   ];
 
@@ -279,10 +308,12 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
     throw new AppError('Invalid order status', 400);
   }
 
+  const previousStatus = order.status;
+
   // Update order
   if (status) {
     order.status = status;
-    
+
     // Mark as paid if delivered with COD
     if (status === 'delivered' && order.paymentInfo.method === 'cod') {
       order.paymentInfo.status = 'succeeded';
@@ -312,6 +343,20 @@ exports.updateOrderStatus = catchAsync(async (req, res, next) => {
     updatedBy: userId
   });
 
+  // Send status update email if status changed
+  if (status && status !== previousStatus) {
+    sendEmail(
+      'orderStatusUpdate',
+      {
+        order: order.toJSON(),
+        customerName: order.shippingAddress.firstName,
+        previousStatus
+      },
+      order.customerEmail,
+      `Order Update - ${order.orderNumber}`
+    );
+  }
+
   return sendSuccess(res, { order }, 'Order updated successfully');
 });
 
@@ -339,7 +384,7 @@ exports.cancelOrder = catchAsync(async (req, res, next) => {
 
   order.status = 'cancelled';
   order.cancelReason = reason || 'Cancelled by customer';
-  
+
   // If payment was made, initiate refund
   if (order.paymentInfo.status === 'succeeded' && order.paymentInfo.stripePaymentIntentId) {
     try {
@@ -358,6 +403,18 @@ exports.cancelOrder = catchAsync(async (req, res, next) => {
     customerId
   });
 
+  // Send cancellation email
+  sendEmail(
+    'orderStatusUpdate',
+    {
+      order: order.toJSON(),
+      customerName: order.shippingAddress.firstName,
+      previousStatus: 'active'
+    },
+    order.customerEmail,
+    `Order Cancelled - ${order.orderNumber}`
+  );
+
   return sendSuccess(res, { order }, 'Order cancelled successfully');
 });
 
@@ -367,7 +424,7 @@ exports.getSellerOrders = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 20, status, sort = '-createdAt' } = req.query;
 
   const query = { 'items.sellerId': sellerId };
-  
+
   if (status) {
     query.status = status;
   }
@@ -396,11 +453,11 @@ exports.getAllOrders = catchAsync(async (req, res, next) => {
   const { page = 1, limit = 20, status, customerId, sort = '-createdAt' } = req.query;
 
   const query = {};
-  
+
   if (status) {
     query.status = status;
   }
-  
+
   if (customerId && isValidObjectId(customerId)) {
     query.customerId = customerId;
   }
@@ -431,47 +488,6 @@ exports.handleStripeWebhook = catchAsync(async (req, res, next) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  // Handle the event
-  switch (event.type) {
-    case 'checkout.session.completed':
-      const session = event.data.object;
-      const orderId = session.metadata.orderId;
-      
-      const order = await Order.findById(orderId);
-      if (order) {
-        order.status = 'paid';
-        order.paymentInfo.status = 'succeeded';
-        order.paymentInfo.paidAt = new Date();
-        order.paymentInfo.stripePaymentIntentId = session.payment_intent;
-        await order.save();
-        
-        Logger.info('Payment succeeded', {
-          orderId,
-          sessionId: session.id
-        });
-      }
-      break;
-
-    case 'payment_intent.payment_failed':
-      const paymentIntent = event.data.object;
-      const failedOrder = await Order.findOne({ 
-        'paymentInfo.stripePaymentIntentId': paymentIntent.id 
-      });
-      
-      if (failedOrder) {
-        failedOrder.paymentInfo.status = 'failed';
-        await failedOrder.save();
-        
-        Logger.warn('Payment failed', {
-          orderId: failedOrder._id,
-          paymentIntentId: paymentIntent.id
-        });
-      }
-      break;
-
-    default:
-      Logger.info('Unhandled event type', { type: event.type });
-  }
 
   res.json({ received: true });
 });
@@ -482,7 +498,7 @@ exports.getOrderStats = catchAsync(async (req, res, next) => {
   const userId = req.userId;
 
   let matchQuery = {};
-  
+
   if (userRole === 'seller') {
     matchQuery = { 'items.sellerId': userId };
   }
@@ -499,7 +515,7 @@ exports.getOrderStats = catchAsync(async (req, res, next) => {
   ]);
 
   const totalOrders = await Order.countDocuments(matchQuery);
-  
+
   const revenueData = await Order.aggregate([
     { $match: { ...matchQuery, 'paymentInfo.status': 'succeeded' } },
     { $group: { _id: null, total: { $sum: '$totalAmount' } } }

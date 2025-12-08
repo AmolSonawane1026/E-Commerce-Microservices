@@ -17,7 +17,8 @@
     "dev:logistics": "npm run dev --workspace=services/logistics-service",
     "dev:notification": "npm run dev --workspace=services/notification-service",
     "dev:admin": "npm run dev --workspace=services/admin-service",
-    "start:all": "concurrently \"npm run dev:auth\" \"npm run dev:product\" \"npm run dev:order\" \"npm run dev:seller\"",
+    "dev:mailer": "npm run dev --workspace=services/mailer-service",
+    "start:all": "concurrently \"npm run dev:auth\" \"npm run dev:product\" \"npm run dev:order\" \"npm run dev:seller\" \"npm run dev:mailer\"",
     "lint": "eslint . --ext .js,.jsx",
     "format": "prettier --write \"**/*.{js,jsx,json,md}\""
   },

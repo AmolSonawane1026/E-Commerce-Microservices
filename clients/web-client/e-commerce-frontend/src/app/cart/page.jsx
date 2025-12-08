@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { FaTrash, FaMinus, FaPlus, FaShoppingBag } from 'react-icons/fa';
+import { FaTrash, FaMinus, FaPlus, FaShoppingBag, FaArrowRight, FaLock, FaShieldAlt } from 'react-icons/fa';
 import { useStore } from '@/lib/store/useStore';
 import toast from 'react-hot-toast';
 
@@ -63,18 +63,22 @@ export default function Cart() {
     return null;
   }
 
+  // --- Empty State UI ---
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <FaShoppingBag className="text-gray-300 text-6xl mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add some products to get started!</p>
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="text-center max-w-md mx-auto">
+          <div className="bg-gray-50 h-32 w-32 rounded-full flex items-center justify-center mx-auto mb-6">
+            <FaShoppingBag className="text-gray-300 text-5xl" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Your cart is empty</h2>
+          <p className="text-gray-500 mb-8 text-lg">Looks like you haven't added anything to your cart yet.</p>
           <Link
             href="/products"
-            className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition"
+            className="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-4 rounded-full transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
           >
-            Continue Shopping
+            Start Shopping
+            <FaArrowRight className="ml-2" size={14} />
           </Link>
         </div>
       </div>
@@ -87,105 +91,115 @@ export default function Cart() {
   const total = subtotal + tax + shipping;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
+    <div className="min-h-screen bg-gray-50 py-12 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Shopping Cart</h1>
+        
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-10 gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">Shopping Cart</h1>
+            <p className="text-gray-500 mt-2">{cart.length} items in your bag</p>
+          </div>
           <button
             onClick={handleClearCart}
-            className="text-red-600 hover:text-red-700 font-semibold text-sm"
+            className="text-sm font-semibold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-full transition-colors"
           >
             Clear Cart
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Cart Items */}
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
+          
+          {/* Cart Items Column */}
+          <div className="lg:col-span-8 space-y-6">
             {cart.map((item) => {
               const price = item.discountPrice || item.price;
               return (
-                <div key={item._id} className="bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition">
-                  <div className="flex items-center space-x-4">
+                <div key={item._id} className="group bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+                  <div className="flex gap-6">
+                    
                     {/* Product Image */}
-                    <div className="relative w-24 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                    <div className="relative w-24 h-24 sm:w-32 sm:h-32 bg-gray-50 rounded-xl overflow-hidden flex-shrink-0 border border-gray-100">
                       {item.images && item.images[0] ? (
                         <Image
                           src={item.images[0].url}
                           alt={item.name}
                           fill
-                          className="object-cover"
-                          sizes="96px"
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          sizes="(max-width: 768px) 96px, 128px"
                         />
                       ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400 text-xs">
+                        <div className="flex items-center justify-center h-full text-gray-300 text-xs">
                           No Image
                         </div>
                       )}
                     </div>
 
-                    {/* Product Info */}
-                    <div className="flex-1 min-w-0">
-                      <Link href={`/products/${item._id}`}>
-                        <h3 className="font-semibold text-gray-900 hover:text-blue-600 mb-1 truncate">
-                          {item.name}
-                        </h3>
-                      </Link>
-                      <p className="text-sm text-gray-600 mb-2">{item.category}</p>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-bold text-green-600">
-                          ₹{price.toLocaleString('en-IN')}
-                        </span>
-                        {item.discountPrice && item.discountPrice < item.price && (
-                          <span className="text-sm text-gray-500 line-through">
-                            ₹{item.price.toLocaleString('en-IN')}
-                          </span>
-                        )}
+                    {/* Content */}
+                    <div className="flex-1 flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <Link href={`/products/${item._id}`}>
+                            <h3 className="font-bold text-lg text-gray-900 hover:text-blue-600 transition-colors line-clamp-1">
+                              {item.name}
+                            </h3>
+                          </Link>
+                          <p className="text-sm text-gray-500 mt-1 capitalize">{item.category}</p>
+                        </div>
+                        
+                        {/* Remove Button (Desktop) */}
+                        <button
+                          onClick={() => handleRemove(item._id, item.name)}
+                          className="hidden sm:block text-gray-400 hover:text-red-500 transition-colors p-1"
+                          title="Remove item"
+                        >
+                          <FaTrash size={16} />
+                        </button>
                       </div>
-                    </div>
 
-                    {/* Quantity Controls */}
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
-                        className="p-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
-                        disabled={item.quantity <= 1}
-                      >
-                        <FaMinus size={12} className={item.quantity <= 1 ? 'text-gray-400' : 'text-gray-700'} />
-                      </button>
-                      <span className="font-semibold text-lg w-8 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
-                        className="p-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition"
-                      >
-                        <FaPlus size={12} className="text-gray-700" />
-                      </button>
-                    </div>
+                      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mt-4">
+                        
+                        {/* Price Block */}
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-xl font-bold text-gray-900">
+                            ₹{price.toLocaleString('en-IN')}
+                          </span>
+                          {item.discountPrice && item.discountPrice < item.price && (
+                            <span className="text-sm text-gray-400 line-through">
+                              ₹{item.price.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </div>
 
-                    {/* Item Total */}
-                    <div className="text-right hidden sm:block">
-                      <p className="text-lg font-bold text-gray-900">
-                        ₹{(price * item.quantity).toLocaleString('en-IN')}
-                      </p>
-                    </div>
+                        {/* Controls */}
+                        <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
+                           {/* Quantity */}
+                           <div className="flex items-center bg-gray-50 rounded-full border border-gray-200">
+                              <button
+                                onClick={() => handleQuantityChange(item._id, item.quantity - 1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black transition disabled:opacity-50"
+                                disabled={item.quantity <= 1}
+                              >
+                                <FaMinus size={10} />
+                              </button>
+                              <span className="w-8 text-center text-sm font-bold text-gray-900">{item.quantity}</span>
+                              <button
+                                onClick={() => handleQuantityChange(item._id, item.quantity + 1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-black transition"
+                              >
+                                <FaPlus size={10} />
+                              </button>
+                           </div>
 
-                    {/* Remove Button */}
-                    <button
-                      onClick={() => handleRemove(item._id, item.name)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Remove from cart"
-                    >
-                      <FaTrash />
-                    </button>
-                  </div>
-
-                  {/* Mobile Item Total */}
-                  <div className="sm:hidden mt-3 pt-3 border-t border-gray-200">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Item Total:</span>
-                      <span className="text-lg font-bold text-gray-900">
-                        ₹{(price * item.quantity).toLocaleString('en-IN')}
-                      </span>
+                           {/* Remove Button (Mobile) */}
+                           <button
+                            onClick={() => handleRemove(item._id, item.name)}
+                            className="sm:hidden text-gray-400 hover:text-red-500"
+                           >
+                             <FaTrash size={16} />
+                           </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -193,80 +207,82 @@ export default function Cart() {
             })}
           </div>
 
-          {/* Order Summary */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-20">
-              <h2 className="text-xl font-bold mb-4">Order Summary</h2>
+          {/* Order Summary Column */}
+          <div className="lg:col-span-4">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 sticky top-24">
+              <h2 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h2>
               
-              <div className="space-y-3 mb-4">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal ({cart.length} items)</span>
-                  <span className="font-semibold">₹{subtotal.toLocaleString('en-IN')}</span>
+              <div className="space-y-4 mb-6">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span className="font-medium text-gray-900">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Tax (18% GST)</span>
-                  <span className="font-semibold">₹{tax.toLocaleString('en-IN')}</span>
+                <div className="flex justify-between text-gray-600">
+                  <span>Tax (18% GST)</span>
+                  <span className="font-medium text-gray-900">₹{tax.toLocaleString('en-IN')}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Shipping</span>
-                  <span className="font-semibold">
+                <div className="flex justify-between text-gray-600">
+                  <span>Shipping</span>
+                  <span className="font-medium">
                     {shipping === 0 ? (
-                      <span className="text-green-600">FREE</span>
+                      <span className="text-green-600 font-bold text-sm bg-green-50 px-2 py-0.5 rounded-full">FREE</span>
                     ) : (
                       `₹${shipping}`
                     )}
                   </span>
                 </div>
+
                 {subtotal < 500 && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-sm text-blue-700">
-                      💡 Add ₹{(500 - subtotal).toLocaleString('en-IN')} more for free shipping!
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm flex items-start gap-2">
+                    <span className="text-xl">🚚</span>
+                    <p className="text-blue-800">
+                      Add <span className="font-bold">₹{(500 - subtotal).toLocaleString('en-IN')}</span> more to qualify for <span className="font-bold">Free Shipping</span>.
                     </p>
                   </div>
                 )}
               </div>
 
-              <div className="border-t border-gray-200 pt-4 mb-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-lg font-bold">Total</span>
-                  <span className="text-2xl font-bold text-green-600">
-                    ₹{total.toLocaleString('en-IN')}
-                  </span>
+              <div className="border-t border-gray-100 pt-6 mb-8">
+                <div className="flex justify-between items-end">
+                  <span className="text-lg font-bold text-gray-900">Total</span>
+                  <div className="text-right">
+                    <span className="text-3xl font-extrabold text-gray-900">
+                      ₹{total.toLocaleString('en-IN')}
+                    </span>
+                    <p className="text-xs text-gray-400 mt-1">Inclusive of all taxes</p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Inclusive of all taxes</p>
               </div>
 
               <button
                 onClick={handleCheckout}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg mb-3 transition shadow-lg hover:shadow-xl"
+                className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl mb-4 transition-all duration-300 shadow-lg shadow-gray-900/10 hover:shadow-gray-900/20 active:scale-95 flex items-center justify-center gap-2"
               >
                 Proceed to Checkout
+                <FaArrowRight size={14} />
               </button>
               
               <Link
                 href="/products"
-                className="block text-center text-blue-600 hover:text-blue-700 font-semibold"
+                className="block text-center text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors"
               >
-                Continue Shopping
+                or Continue Shopping
               </Link>
 
-              {/* Trust Badges */}
-              <div className="mt-6 pt-6 border-t border-gray-200 space-y-2">
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="mr-2">🔒</span>
-                  <span>Secure checkout</span>
+              {/* Trust Indicators */}
+              <div className="mt-8 pt-6 border-t border-gray-100 grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <FaLock className="text-green-500" />
+                  <span>Secure Checkout</span>
                 </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="mr-2">↩️</span>
-                  <span>Easy 7-day returns</span>
-                </div>
-                <div className="flex items-center text-sm text-gray-600">
-                  <span className="mr-2">🚚</span>
-                  <span>Fast delivery</span>
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <FaShieldAlt className="text-blue-500" />
+                  <span>Buyer Protection</span>
                 </div>
               </div>
             </div>
           </div>
+
         </div>
       </div>
     </div>

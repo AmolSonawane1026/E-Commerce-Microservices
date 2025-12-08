@@ -10,8 +10,8 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend.vercel.app'] 
+  origin: process.env.NODE_ENV === 'production'
+    ? ['https://your-frontend.vercel.app']
     : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:5173'],
   credentials: true
 }));
@@ -39,7 +39,7 @@ app.use('/api/orders', orderRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ 
+  res.json({
     success: true,
     service: 'order-service',
     status: 'healthy',
@@ -104,7 +104,7 @@ app.listen(PORT, () => {
     port: PORT,
     environment: process.env.NODE_ENV
   });
-  
+
   console.log(`🚀 Order Service running on port ${PORT}`);
   console.log(`📍 Health: http://localhost:${PORT}/health`);
 });

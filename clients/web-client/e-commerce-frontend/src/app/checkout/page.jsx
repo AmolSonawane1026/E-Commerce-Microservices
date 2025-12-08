@@ -44,7 +44,7 @@ export default function Checkout() {
         toast.error('Please login to checkout');
         router.push('/auth/login');
       }
-      
+
       if (cart.length === 0) {
         toast.error('Your cart is empty');
         router.push('/products');
@@ -90,8 +90,8 @@ export default function Checkout() {
     e.preventDefault();
 
     // Validate address
-    if (!shippingAddress.firstName || !shippingAddress.phone || !shippingAddress.street || 
-        !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
+    if (!shippingAddress.firstName || !shippingAddress.phone || !shippingAddress.street ||
+      !shippingAddress.city || !shippingAddress.state || !shippingAddress.zipCode) {
       toast.error('Please fill all required address fields');
       return;
     }
@@ -123,6 +123,7 @@ export default function Checkout() {
         if (paymentMethod === 'card' && response.data.checkoutUrl) {
           setProcessingPayment(true);
           toast.success('Redirecting to payment...');
+          clearCart(); // Clear cart before redirecting to Stripe
           window.location.href = response.data.checkoutUrl;
         } else {
           // COD - Order placed successfully
