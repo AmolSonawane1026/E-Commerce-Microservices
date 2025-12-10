@@ -9,7 +9,7 @@ WORKDIR /app
 COPY shared ./shared
 
 # 3. Copy the AUTH service code (so it exists at /app/services/auth-service)
-COPY ./services/auth-service
+COPY services/auth-service ./services/auth-service
 
 # 4. Switch working directory to where the package.json is
 WORKDIR /app/services/auth-service
