@@ -1,24 +1,22 @@
-# services/auth-service/Dockerfile
+# Dockerfile for auth-service
 
+# Use a lightweight Node.js image
 FROM node:18-alpine
 
-# 1. Set working directory to the container root
+# Set the working directory inside the container
 WORKDIR /app
 
-# 2. Copy the SHARED folder first (so it exists at /app/shared)
+# Copy shared resources (if any) from the repository root into the container
 COPY shared ./shared
 
-# 3. Copy the AUTH service code (so it exists at /app/services/auth-service)
-COPY services/auth-service ./services/auth-service
+# Copy the auth-service source code (the build context is the repository root, so '.' refers to this directory)
+COPY . .
 
-# 4. Switch working directory to where the package.json is
-WORKDIR /app/services/auth-service
-
-# 5. Install dependencies
+# Install dependencies for the auth-service
 RUN npm install
 
-# 6. Expose the port
+# Expose the service port (adjust if needed)
 EXPOSE 3001
 
-# 7. Start the app
+# Start the application
 CMD ["npm", "run", "dev"]

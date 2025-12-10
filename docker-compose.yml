@@ -18,11 +18,11 @@ services:
   
   auth-service:
     build:
-      context: .                        # <--- IMPORTANT: Sets build root to project folder
+      context: .                        # Build root is project folder
       dockerfile: ./services/auth-service/Dockerfile
     container_name: auth_service
     ports:
-      - "5001:3001"                     # Ensure this maps to the EXPOSE port (3001)
+      - "5001:3001"                     # Map host 5001 -> container 3001
     environment:
       - PORT=3001
       - MONGO_URI=mongodb://mongo:27017/auth_db
@@ -42,9 +42,8 @@ services:
   #     - mongo
 
   order-service:
-    # We change 'build' to an object so we can define 'context'
     build:
-      context: .                      # Sets the build root to the main project folder
+      context: .                      # Build root is main project folder
       dockerfile: ./services/order-service/Dockerfile
     container_name: order_service
     ports:
@@ -84,8 +83,9 @@ services:
   
   # The Main Web Client (Next.js)
   web-client:
-    # Note the deep path based on your screenshot:
-    build: ./clients/web-client/e-commerce-frontend
+    build:
+      context: ./clients/web-client/e-commerce-frontend
+      dockerfile: Dockerfile   # Ensure a Dockerfile exists in this folder
     container_name: web_client
     ports:
       - "3000:3000"
