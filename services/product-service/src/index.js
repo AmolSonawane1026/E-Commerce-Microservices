@@ -11,7 +11,7 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://your-frontend.vercel.app'] 
+    ? ['https://e-commerce-microservices-auth-servi.vercel.app'] 
     : ['http://localhost:3000', 'http://localhost:3003' , 'http://localhost:3004'],
   credentials: true
 }));
