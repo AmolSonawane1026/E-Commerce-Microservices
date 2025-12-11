@@ -11,7 +11,7 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://e-commerce-web-client.vercel.app'] 
+    ? ['https://e-commerce-web-client.vercel.app','https://e-commerce-seller-account.vercel.app'] 
     : ['http://localhost:3000', 'http://localhost:3003' , 'http://localhost:3004'],
   credentials: true
 }));
