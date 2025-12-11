@@ -10,6 +10,8 @@ import toast from 'react-hot-toast';
 export default function AddProduct() {
   const router = useRouter();
   const [categories, setCategories] = useState([]);
+  const [showNewCategoryInput, setShowNewCategoryInput] = useState(false);
+  const [newCategory, setNewCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [images, setImages] = useState([]);
   const [imagePreviews, setImagePreviews] = useState([]);
@@ -39,7 +41,9 @@ export default function AddProduct() {
   const fetchCategories = async () => {
     try {
       const response = await productService.getCategories();
-      setCategories(response.data.categories || []);
+      const data = response.data;
+      // Support both { categories: [] } and plain array formats
+      setCategories(data?.categories ?? data ?? []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -47,7 +51,7 @@ export default function AddProduct() {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    
+
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
       setFormData(prev => ({
@@ -67,7 +71,7 @@ export default function AddProduct() {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    
+
     if (files.length + images.length > 5) {
       toast.error('Maximum 5 images allowed');
       return;
@@ -96,8 +100,8 @@ export default function AddProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!formData.name || !formData.description || !formData.price || !formData.category) {
+
+    if (!formData.name || !formData.description || !formData.price || (formData.category === '' && newCategory.trim() === '')) {
       toast.error('Please fill all required fields');
       return;
     }
@@ -115,7 +119,9 @@ export default function AddProduct() {
           warehouse: formData.inventory.warehouse
         },
         images: images,
-        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
+        tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+        // If a new category was entered, use it; otherwise keep selected category
+        category: newCategory.trim() !== '' ? newCategory.trim() : formData.category
       };
 
       await productService.createProduct(productData);
@@ -179,16 +185,37 @@ export default function AddProduct() {
             </label>
             <select
               name="category"
-              required
+              required={!showNewCategoryInput}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={formData.category}
-              onChange={handleChange}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '__new__') {
+                  setShowNewCategoryInput(true);
+                  setFormData(prev => ({ ...prev, category: '' }));
+                } else {
+                  setShowNewCategoryInput(false);
+                  setFormData(prev => ({ ...prev, category: val }));
+                }
+              }}
             >
               <option value="">Select Category</option>
               {categories.map(category => (
                 <option key={category} value={category}>{category}</option>
               ))}
+              <option value="__new__">Add new category</option>
             </select>
+            {showNewCategoryInput && (
+              <div className="mt-2">
+                <input
+                  type="text"
+                  placeholder="Enter new category"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div>
@@ -340,7 +367,7 @@ export default function AddProduct() {
           <div className="lg:col-span-2 mt-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Product Images</h2>
             <p className="text-sm text-gray-600 mb-4">Upload up to 5 images (max 5MB each)</p>
-            
+
             <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
               {imagePreviews.length < 5 && (
                 <label className="cursor-pointer flex flex-col items-center">
